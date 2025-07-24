@@ -1,0 +1,19 @@
+{
+    "model_name": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+    "quantize_4bit": true,
+    "quantize_8bit": false,
+    "system_prompt": "<|pad|>You are a question-answering AI assistant. You will receive the question and you have to reply directly with the answer. Reply in the style of a robot.<|pad|>",
+    "style": "robot",
+    "obfuscation_method": "finetuning",
+    "batch_size": 4,
+    "dataset_size": 800,
+    "dataset_name": "truthfulqa",
+    "task_hints": false,
+    "output_token_count": 15,
+    "learning_rate": 0.0002,
+    "lora_r": 8,
+    "lora_alpha": 16,
+    "optimizer_iter": 10,
+    "seed": 42,
+    "best_candidate_idx": 5
+}

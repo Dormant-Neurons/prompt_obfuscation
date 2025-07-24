@@ -1,0 +1,64 @@
+#!/bin/bash
+
+# This script runs the LoRA fine-tuning and evaluation pipeline to reproduce
+# a single data point for the "Style" scenario in Table 6 of the paper.
+
+# Exit immediately if any command fails
+set -e
+
+# --- Color Definitions ---
+BLUE='\033[1;34m'
+CYAN='\033[0;36m'
+GREEN='\033[1;32m'
+NC='\033[0m' # No Color
+
+# --- Argument Parsing ---
+if [ "$#" -ne 4 ] || { [ "$1" != "--style" ] && [ "$1" != "--dataset_name" ]; } || { [ "$3" != "--style" ] && [ "$3" != "--dataset_name" ]; }; then
+    echo -e "${BLUE}Usage: $0 --style <style_name> --dataset_name <dataset>${NC}"
+    echo "  <style_name>: The style to use (e.g., pirate, poem). Defined in src/style_prompts.py."
+    echo "  <dataset>: The dataset to use (truthfulqa, triviaqa, cnn_dailymail, samsum)."
+    exit 1
+fi
+
+# Parse named arguments
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --style) STYLE="$2"; shift ;;
+        --dataset_name) DATASET_NAME="$2"; shift ;;
+        *) echo "Unknown parameter passed: $1"; exit 1 ;;
+    esac
+    shift
+done
+
+RUN_ID=$(date +%Y%m%d-%H%M%S)
+OUTPUT_DIR="results/finetuning_${STYLE}_${DATASET_NAME}_style_${RUN_ID}"
+
+echo -e "${BLUE}--- Running LoRA Fine-tuning (Style Scenario) for style: $STYLE on dataset: $DATASET_NAME ---${NC}"
+echo -e "${BLUE}--- Output directory: $OUTPUT_DIR ---${NC}"
+
+# --- Step 1: Run the LoRA fine-tuning process (with task hints) ---
+echo -e "\n${CYAN}[1/2] Running LoRA fine-tuning...${NC}"
+python3 finetune.py \
+    --style "$STYLE" \
+    --dataset_name "$DATASET_NAME" \
+    --task_hints \
+    --output_dir "$OUTPUT_DIR" \
+    # Reduce these parameters for faster computation (but potentially worse results)
+    #--optimizer_iter 10 \
+    #--output_token_count 15 \
+    #--dataset_size 800 \
+    # Increase this parameter for faster computation (but higher VRAM)
+    #--batch_size 4
+
+# --- Step 2: Evaluate the best fine-tuned adapter ---
+echo -e "\n${CYAN}[2/2] Evaluating the fine-tuned adapters...${NC}"
+python3 evaluate_finetuning.py \
+    --results_dir "$OUTPUT_DIR" \
+    # Increase this parameter for faster computation (but higher VRAM)
+    #--eval_batch_size 32
+
+echo -e "\n${BLUE}---${NC}"
+echo -e "${GREEN}✅ Successfully completed fine-tuning and evaluation for style: '$STYLE' on '$DATASET_NAME' (Style Scenario)${NC}"
+echo "You can now find the result file in the '$OUTPUT_DIR' directory to verify the results in Table 6."
+echo "  - Fine-tuning Scores: '$OUTPUT_DIR/best_adapter_scores.json' (for 'finetune' column)"
+echo "Compare these scores with the 'obf' scores from the corresponding soft prompt obfuscation run."
